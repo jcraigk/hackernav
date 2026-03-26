@@ -8,7 +8,9 @@
     "format": "prettier --write ."
   },
   "devDependencies": {
+    "@eslint/js": "^8.57.1",
     "eslint": "^9.0.0",
+    "globals": "^17.4.0",
     "prettier": "^3.0.0"
   }
 }

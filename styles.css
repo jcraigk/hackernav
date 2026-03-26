@@ -1,27 +1,195 @@
-/* HackerNav - Chevron toggle and descendant count styles */
+/* HackerNav styles */
+
+/* Card container for each comment */
+tr.athing.comtr td.default {
+  position: relative;
+  padding: 8px 10px 8px 24px !important;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 6px;
+  background-color: rgba(128, 128, 128, 0.06);
+  overflow: hidden;
+}
+
+/* Comments with a toggle need more left padding for the wider sidebar */
+tr.athing.comtr td.default:has(.hn-toggle) {
+  padding-left: 38px !important;
+}
+
+/* Spacing between comment cards */
+tr.athing.comtr > td {
+  padding-bottom: 4px;
+}
+
+/* Hide the original vote arrow column */
+tr.athing.comtr td.votelinks {
+  width: 0 !important;
+  min-width: 0 !important;
+  padding: 0 !important;
+  overflow: hidden !important;
+}
+
+tr.athing.comtr td.votelinks * {
+  display: none !important;
+}
+
+/* Sidebar: toggle strip + vote column side by side */
+.hn-sidebar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  gap: 2px;
+}
+
+/* --- Expand/collapse toggle strip --- */
 
 .hn-toggle {
+  width: 12px;
   cursor: pointer;
-  user-select: none;
-  font-size: 10px;
-  color: #888;
-  display: inline-block;
-  width: 10px;
-  text-align: center;
-  margin-right: 2px;
-  font-family: monospace;
-  vertical-align: middle;
+  background-color: rgba(128, 128, 128, 0.25);
+  border-radius: 2px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.hn-toggle::after {
+  content: "\25B6";
+  font-size: 7px;
+  color: rgba(128, 128, 128, 0.7);
+  transition: color 0.15s ease;
 }
 
 .hn-toggle:hover {
+  background-color: #ff6600;
+}
+
+.hn-toggle:hover::after {
+  color: #fff;
+}
+
+.hn-toggle.hn-expanded {
+  background-color: #ff6600;
+}
+
+.hn-toggle.hn-expanded::after {
+  content: "\25BC";
+  color: #fff;
+}
+
+.hn-toggle.hn-expanded:hover {
+  background-color: #cc5200;
+}
+
+/* --- Vote column: up stacked on top of down --- */
+
+.hn-vote-col {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.hn-vote-strip {
+  flex: 1;
+  width: 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  background-color: rgba(128, 128, 128, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.15s ease;
+}
+
+.hn-vote-strip::after {
+  font-size: 7px;
+  color: rgba(128, 128, 128, 0.6);
+  transition: color 0.15s ease;
+}
+
+.hn-upvote::after {
+  content: "\25B2";
+}
+
+.hn-downvote::after {
+  content: "\25BC";
+}
+
+/* Hover states */
+.hn-upvote:hover {
+  background-color: rgba(92, 184, 92, 0.85);
+}
+
+.hn-upvote:hover::after {
+  color: #fff;
+}
+
+.hn-downvote:hover {
+  background-color: rgba(217, 83, 79, 0.85);
+}
+
+.hn-downvote:hover::after {
+  color: #fff;
+}
+
+/* Voted (active) states */
+.hn-upvote.hn-voted {
+  background-color: rgba(92, 184, 92, 0.85);
+}
+
+.hn-upvote.hn-voted::after {
+  color: #fff;
+}
+
+.hn-upvote.hn-voted:hover {
+  background-color: rgba(68, 157, 68, 0.9);
+}
+
+.hn-downvote.hn-voted {
+  background-color: rgba(217, 83, 79, 0.85);
+}
+
+.hn-downvote.hn-voted::after {
+  color: #fff;
+}
+
+.hn-downvote.hn-voted:hover {
+  background-color: rgba(201, 48, 44, 0.9);
+}
+
+/* Dim the timestamp relative to the username */
+.comhead .age a {
+  opacity: 0.5;
+}
+
+/* Descendant count pills */
+.hn-desc-count {
+  margin-left: 6px;
+  display: inline-flex;
+  gap: 3px;
+  vertical-align: middle;
+}
+
+.hn-pill {
+  display: inline-block;
+  font-size: 9px;
+  font-family: Verdana, Geneva, sans-serif;
+  line-height: 1;
+  padding: 2px 5px;
+  border-radius: 8px;
+  font-weight: bold;
+}
+
+.hn-pill-direct {
+  background-color: rgba(255, 102, 0, 0.2);
   color: #ff6600;
 }
 
-.hn-desc-count {
-  font-size: 8pt;
-  color: #999;
-  margin-left: 4px;
-  font-family: Verdana, Geneva, sans-serif;
+.hn-pill-total {
+  background-color: rgba(128, 128, 128, 0.15);
+  color: rgba(128, 128, 128, 0.7);
 }
 
 /* Hide the original HN toggle */
@@ -29,12 +197,18 @@ a.togg {
   display: none !important;
 }
 
-/* Hide the "[flagged]" / "[dead]" style collapse indicator text that HN adds */
+/* Hide HN's native collapse indicator text */
 .comhead .hnx-orig-toggle {
   display: none !important;
 }
 
-/* When a comment row is collapsed (hidden as a child), hide the entire row */
+/* Keyboard-selected comment highlight */
+tr.athing.comtr.hn-selected td.default {
+  border-color: rgba(255, 102, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.25);
+}
+
+/* When a comment row is hidden as a child, hide the entire row */
 tr.athing.comtr.hn-hidden {
   display: none !important;
 }

@@ -54,24 +54,23 @@
     let direct = node.children.length;
     let total = direct;
     for (const child of node.children) {
-      total += countDescendants(child);
+      total += countDescendants(child).total;
     }
     return { direct, total };
   }
 
   // --- DOM manipulation ---
 
-  // Create the chevron toggle element
   function createToggle(node, collapsed) {
-    const span = document.createElement("span");
-    span.className = "hn-toggle";
-    span.textContent = collapsed ? "\u25B6" : "\u25BC"; // right-pointing or down-pointing triangle
-    span.addEventListener("click", function (e) {
+    const el = document.createElement("div");
+    el.className = "hn-toggle" + (collapsed ? "" : " hn-expanded");
+    el.title = "Click to expand/collapse replies";
+    el.addEventListener("click", function (e) {
       e.preventDefault();
       e.stopPropagation();
       toggleNode(node);
     });
-    return span;
+    return el;
   }
 
   // Create the descendant count label
@@ -79,37 +78,149 @@
     const { direct, total } = countDescendants(node);
     if (total === 0) return null;
 
-    const span = document.createElement("span");
-    span.className = "hn-desc-count";
-    if (direct === total) {
-      span.textContent = "(" + total + (total === 1 ? " reply" : " replies") + ")";
-    } else {
-      span.textContent =
-        "(" + direct + " direct, " + total + " total)";
+    const wrapper = document.createElement("span");
+    wrapper.className = "hn-desc-count";
+
+    var directPill = document.createElement("span");
+    directPill.className = "hn-pill hn-pill-direct";
+    directPill.textContent = direct;
+    directPill.title = direct + " direct " + (direct === 1 ? "reply" : "replies");
+    wrapper.appendChild(directPill);
+
+    if (total !== direct) {
+      var totalPill = document.createElement("span");
+      totalPill.className = "hn-pill hn-pill-total";
+      totalPill.textContent = total;
+      totalPill.title = total + " total " + (total === 1 ? "reply" : "replies");
+      wrapper.appendChild(totalPill);
     }
-    return span;
+
+    return wrapper;
   }
 
-  // Inject toggle and count into a comment row's header
-  function injectControls(node, collapsed) {
-    const comhead = node.row.querySelector("span.comhead");
+  function isVoted(link) {
+    return link && link.href && link.href.includes("how=un");
+  }
+
+  function syncVoteState(row, upStrip, downStrip) {
+    const votelinks = row.querySelector("td.votelinks");
+    const comhead = row.querySelector("span.comhead");
+    const hasUnvote =
+      comhead &&
+      Array.from(comhead.querySelectorAll("a")).some(function (a) {
+        return a.textContent.trim() === "unvote";
+      });
+
+    if (upStrip) {
+      const up = votelinks && votelinks.querySelector("a[id^='up_']");
+      upStrip.classList.toggle("hn-voted", isVoted(up) || (hasUnvote && !downStrip));
+    }
+    if (downStrip) {
+      const down = votelinks && votelinks.querySelector("a[id^='down_']");
+      downStrip.classList.toggle("hn-voted", isVoted(down));
+      if (hasUnvote && !downStrip.classList.contains("hn-voted") && upStrip) {
+        upStrip.classList.add("hn-voted");
+      }
+    }
+  }
+
+  function stripNavLinks(row) {
+    const comhead = row.querySelector("span.comhead");
     if (!comhead) return;
 
-    // Only add controls if this comment has children
-    if (node.children.length === 0) return;
+    const navTexts = new Set(["root", "parent", "prev", "next", "unvote", "undown"]);
 
-    const toggle = createToggle(node, collapsed);
-    node._toggle = toggle;
+    comhead.querySelectorAll("a").forEach(function (link) {
+      if (!navTexts.has(link.textContent.trim())) return;
 
-    const descCount = createDescCount(node);
-    node._descCount = descCount;
+      var node = link.previousSibling;
+      while (node && node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "|") {
+        var prev = node.previousSibling;
+        node.remove();
+        node = prev;
+      }
+      link.remove();
+    });
+  }
 
-    // Insert toggle at the start of comhead
-    comhead.insertBefore(toggle, comhead.firstChild);
+  function injectControls(node) {
+    const defaultTd = node.row.querySelector("td.default");
+    if (!defaultTd) return;
 
-    // Insert descendant count after the comhead content
-    if (descCount) {
-      comhead.appendChild(descCount);
+    const sidebar = document.createElement("div");
+    sidebar.className = "hn-sidebar";
+
+    if (node.children.length > 0) {
+      const toggle = createToggle(node, true);
+      node._toggle = toggle;
+      sidebar.appendChild(toggle);
+
+      const comhead = node.row.querySelector("span.comhead");
+      if (comhead) {
+        const descCount = createDescCount(node);
+        node._descCount = descCount;
+        if (descCount) comhead.appendChild(descCount);
+      }
+    }
+
+    const votelinks = node.row.querySelector("td.votelinks");
+    if (votelinks) {
+      const upLink = votelinks.querySelector("a[id^='up_']");
+      const downLink = votelinks.querySelector("a[id^='down_']");
+
+      if (upLink || downLink) {
+        const voteCol = document.createElement("div");
+        voteCol.className = "hn-vote-col";
+
+        var upStrip = null;
+        var downStrip = null;
+
+        if (upLink) {
+          upStrip = document.createElement("div");
+          upStrip.className = "hn-vote-strip hn-upvote";
+          upStrip.title = "upvote";
+          upStrip.addEventListener("click", () => {
+            upLink.click();
+            upStrip.classList.toggle("hn-voted");
+            if (downStrip) downStrip.classList.remove("hn-voted");
+          });
+          voteCol.appendChild(upStrip);
+        }
+
+        if (downLink) {
+          downStrip = document.createElement("div");
+          downStrip.className = "hn-vote-strip hn-downvote";
+          downStrip.title = "downvote";
+          downStrip.addEventListener("click", () => {
+            downLink.click();
+            downStrip.classList.toggle("hn-voted");
+            if (upStrip) upStrip.classList.remove("hn-voted");
+          });
+          voteCol.appendChild(downStrip);
+        }
+
+        sidebar.appendChild(voteCol);
+
+        syncVoteState(node.row, upStrip, downStrip);
+
+        new MutationObserver(() => syncVoteState(node.row, upStrip, downStrip)).observe(votelinks, {
+          subtree: true,
+          attributes: true,
+          childList: true,
+        });
+
+        const comhead = node.row.querySelector("span.comhead");
+        if (comhead) {
+          new MutationObserver(() => stripNavLinks(node.row)).observe(comhead, {
+            childList: true,
+            subtree: true,
+          });
+        }
+      }
+    }
+
+    if (sidebar.children.length > 0) {
+      defaultTd.insertBefore(sidebar, defaultTd.firstChild);
     }
   }
 
@@ -118,10 +229,9 @@
     for (const child of node.children) {
       if (visible) {
         child.row.classList.remove("hn-hidden");
-        // When showing children, they should appear collapsed (their own children hidden)
         child._collapsed = true;
         if (child._toggle) {
-          child._toggle.textContent = "\u25B6";
+          child._toggle.classList.remove("hn-expanded");
         }
         // Ensure grandchildren are hidden
         setChildrenVisible(child, false);
@@ -138,15 +248,73 @@
     const collapsed = node._collapsed;
 
     if (collapsed) {
-      // Expand: show direct children (each starts collapsed)
       node._collapsed = false;
-      node._toggle.textContent = "\u25BC";
+      node._toggle.classList.add("hn-expanded");
       setChildrenVisible(node, true);
     } else {
-      // Collapse: hide all descendants
       node._collapsed = true;
-      node._toggle.textContent = "\u25B6";
+      node._toggle.classList.remove("hn-expanded");
       setChildrenVisible(node, false);
+    }
+  }
+
+  // --- Keyboard navigation ---
+
+  var rowToNode = new WeakMap();
+  var selectedRow = null;
+
+  function getVisibleRows() {
+    return Array.from(document.querySelectorAll("tr.athing.comtr:not(.hn-hidden)"));
+  }
+
+  function selectComment(row) {
+    if (selectedRow) {
+      selectedRow.classList.remove("hn-selected");
+    }
+    selectedRow = row;
+    if (row) {
+      row.classList.add("hn-selected");
+      var rect = row.getBoundingClientRect();
+      window.scrollBy({ top: rect.top - 200, behavior: "smooth" });
+    }
+  }
+
+  function navigate(direction) {
+    var visible = getVisibleRows();
+    if (visible.length === 0) return;
+
+    if (!selectedRow || visible.indexOf(selectedRow) === -1) {
+      selectComment(direction === 1 ? visible[0] : visible[visible.length - 1]);
+      return;
+    }
+
+    var idx = visible.indexOf(selectedRow);
+    idx =
+      direction === 1 ? (idx + 1) % visible.length : (idx - 1 + visible.length) % visible.length;
+    selectComment(visible[idx]);
+  }
+
+  function toggleSelected() {
+    if (!selectedRow) return;
+    var node = rowToNode.get(selectedRow);
+    if (node && node._toggle) {
+      toggleNode(node);
+    }
+  }
+
+  function handleKeydown(e) {
+    var tag = document.activeElement && document.activeElement.tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      navigate(1);
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      navigate(-1);
+    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
+      e.preventDefault();
+      toggleSelected();
     }
   }
 
@@ -158,29 +326,25 @@
 
     const topLevel = buildTree(rows);
 
-    // Walk all nodes and set up controls
     function walk(nodes, isTopLevel) {
       for (const node of nodes) {
-        const collapsed = !isTopLevel; // top-level starts expanded? No — top-level starts collapsed too
-        // Actually: top-level comments are visible, but their children are hidden.
-        // So top-level nodes are "collapsed" (children hidden).
         node._collapsed = true;
-        injectControls(node, true);
+        rowToNode.set(node.row, node);
+        stripNavLinks(node.row);
+        injectControls(node);
 
-        // Hide all non-top-level rows initially
         if (!isTopLevel) {
           node.row.classList.add("hn-hidden");
         }
 
-        // Recurse into children
         walk(node.children, false);
       }
     }
 
     walk(topLevel, true);
+    document.addEventListener("keydown", handleKeydown);
   }
 
-  // Run when DOM is ready (content script runs at document_idle, but just in case)
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init);
   } else {
