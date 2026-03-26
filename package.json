@@ -1,0 +1,14 @@
+{
+  "name": "hackernav",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Chrome extension for easier Hacker News comment navigation",
+  "scripts": {
+    "lint": "eslint content.js",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "eslint": "^9.0.0",
+    "prettier": "^3.0.0"
+  }
+}

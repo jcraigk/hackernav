@@ -1,0 +1,15 @@
+{
+  "manifest_version": 3,
+  "name": "HackerNav",
+  "version": "1.0.0",
+  "description": "Easier comment navigation for Hacker News",
+  "permissions": ["activeTab"],
+  "content_scripts": [
+    {
+      "matches": ["*://news.ycombinator.com/item*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+/* HackerNav - Chevron toggle and descendant count styles */
+
+.hn-toggle {
+  cursor: pointer;
+  user-select: none;
+  font-size: 10px;
+  color: #888;
+  display: inline-block;
+  width: 10px;
+  text-align: center;
+  margin-right: 2px;
+  font-family: monospace;
+  vertical-align: middle;
+}
+
+.hn-toggle:hover {
+  color: #ff6600;
+}
+
+.hn-desc-count {
+  font-size: 8pt;
+  color: #999;
+  margin-left: 4px;
+  font-family: Verdana, Geneva, sans-serif;
+}
+
+/* Hide the original HN toggle */
+a.togg {
+  display: none !important;
+}
+
+/* Hide the "[flagged]" / "[dead]" style collapse indicator text that HN adds */
+.comhead .hnx-orig-toggle {
+  display: none !important;
+}
+
+/* When a comment row is collapsed (hidden as a child), hide the entire row */
+tr.athing.comtr.hn-hidden {
+  display: none !important;
+}
