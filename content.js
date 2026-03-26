@@ -147,15 +147,17 @@
     const defaultTd = node.row.querySelector("td.default");
     if (!defaultTd) return;
 
-    const sidebar = document.createElement("div");
-    sidebar.className = "hn-sidebar";
+    const comhead = node.row.querySelector("span.comhead");
 
     if (node.children.length > 0) {
+      const sidebar = document.createElement("div");
+      sidebar.className = "hn-sidebar";
+
       const toggle = createToggle(node, true);
       node._toggle = toggle;
       sidebar.appendChild(toggle);
+      defaultTd.insertBefore(sidebar, defaultTd.firstChild);
 
-      const comhead = node.row.querySelector("span.comhead");
       if (comhead) {
         const descCount = createDescCount(node);
         node._descCount = descCount;
@@ -163,64 +165,62 @@
       }
     }
 
+    if (!comhead) return;
+
     const votelinks = node.row.querySelector("td.votelinks");
-    if (votelinks) {
-      const upLink = votelinks.querySelector("a[id^='up_']");
-      const downLink = votelinks.querySelector("a[id^='down_']");
+    if (!votelinks) return;
 
-      if (upLink || downLink) {
-        const voteCol = document.createElement("div");
-        voteCol.className = "hn-vote-col";
+    const upLink = votelinks.querySelector("a[id^='up_']");
+    const downLink = votelinks.querySelector("a[id^='down_']");
+    var upBtn = null;
+    var downBtn = null;
 
-        var upStrip = null;
-        var downStrip = null;
+    var voteGroup = document.createElement("span");
+    voteGroup.className = "hn-vote-group";
 
-        if (upLink) {
-          upStrip = document.createElement("div");
-          upStrip.className = "hn-vote-strip hn-upvote";
-          upStrip.title = "upvote";
-          upStrip.addEventListener("click", () => {
-            upLink.click();
-            upStrip.classList.toggle("hn-voted");
-            if (downStrip) downStrip.classList.remove("hn-voted");
-          });
-          voteCol.appendChild(upStrip);
-        }
-
-        if (downLink) {
-          downStrip = document.createElement("div");
-          downStrip.className = "hn-vote-strip hn-downvote";
-          downStrip.title = "downvote";
-          downStrip.addEventListener("click", () => {
-            downLink.click();
-            downStrip.classList.toggle("hn-voted");
-            if (upStrip) upStrip.classList.remove("hn-voted");
-          });
-          voteCol.appendChild(downStrip);
-        }
-
-        sidebar.appendChild(voteCol);
-
-        syncVoteState(node.row, upStrip, downStrip);
-
-        new MutationObserver(() => syncVoteState(node.row, upStrip, downStrip)).observe(votelinks, {
-          subtree: true,
-          attributes: true,
-          childList: true,
-        });
-
-        const comhead = node.row.querySelector("span.comhead");
-        if (comhead) {
-          new MutationObserver(() => stripNavLinks(node.row)).observe(comhead, {
-            childList: true,
-            subtree: true,
-          });
-        }
-      }
+    if (upLink) {
+      upBtn = document.createElement("span");
+      upBtn.className = "hn-vote-btn hn-upvote";
+      upBtn.textContent = "\u25B2";
+      upBtn.title = "upvote";
+      upBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        upLink.click();
+        upBtn.classList.toggle("hn-voted");
+        if (downBtn) downBtn.classList.remove("hn-voted");
+      });
+      voteGroup.appendChild(upBtn);
     }
 
-    if (sidebar.children.length > 0) {
-      defaultTd.insertBefore(sidebar, defaultTd.firstChild);
+    if (downLink) {
+      downBtn = document.createElement("span");
+      downBtn.className = "hn-vote-btn hn-downvote";
+      downBtn.textContent = "\u25BC";
+      downBtn.title = "downvote";
+      downBtn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        downLink.click();
+        downBtn.classList.toggle("hn-voted");
+        if (upBtn) upBtn.classList.remove("hn-voted");
+      });
+      voteGroup.appendChild(downBtn);
+    }
+
+    comhead.appendChild(voteGroup);
+
+    if (upBtn || downBtn) {
+      syncVoteState(node.row, upBtn, downBtn);
+
+      new MutationObserver(() => syncVoteState(node.row, upBtn, downBtn)).observe(votelinks, {
+        subtree: true,
+        attributes: true,
+        childList: true,
+      });
+
+      new MutationObserver(() => stripNavLinks(node.row)).observe(comhead, {
+        childList: true,
+        subtree: true,
+      });
     }
   }
 
@@ -302,6 +302,56 @@
     }
   }
 
+  function walkUpAndCollapse(node) {
+    var current = node;
+    while (current) {
+      if (!current.parent) {
+        var visible = getVisibleRows();
+        var idx = visible.indexOf(current.row);
+        if (idx >= 0 && idx < visible.length - 1) {
+          selectComment(visible[idx + 1]);
+        } else {
+          selectComment(visible[0]);
+        }
+        return;
+      }
+
+      var siblings = current.parent.children;
+      var sibIdx = siblings.indexOf(current);
+      if (sibIdx < siblings.length - 1) {
+        selectComment(siblings[sibIdx + 1].row);
+        return;
+      }
+
+      if (!current.parent._collapsed) {
+        toggleNode(current.parent);
+      }
+      current = current.parent;
+    }
+  }
+
+  function spaceNavigate() {
+    if (!selectedRow || getVisibleRows().indexOf(selectedRow) === -1) {
+      var visible = getVisibleRows();
+      if (visible.length > 0) selectComment(visible[0]);
+      return;
+    }
+
+    var node = rowToNode.get(selectedRow);
+    if (!node) {
+      navigate(1);
+      return;
+    }
+
+    if (node.children.length > 0) {
+      if (node._collapsed) toggleNode(node);
+      selectComment(node.children[0].row);
+      return;
+    }
+
+    walkUpAndCollapse(node);
+  }
+
   function handleKeydown(e) {
     var tag = document.activeElement && document.activeElement.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -315,6 +365,9 @@
     } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
       e.preventDefault();
       toggleSelected();
+    } else if (e.key === " ") {
+      e.preventDefault();
+      spaceNavigate();
     }
   }
 

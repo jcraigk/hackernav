@@ -3,16 +3,16 @@
 /* Card container for each comment */
 tr.athing.comtr td.default {
   position: relative;
-  padding: 8px 10px 8px 24px !important;
+  padding: 8px 10px !important;
   border: 1px solid rgba(128, 128, 128, 0.25);
   border-radius: 6px;
   background-color: rgba(128, 128, 128, 0.06);
   overflow: hidden;
 }
 
-/* Comments with a toggle need more left padding for the wider sidebar */
+/* Comments with a toggle need left padding for the sidebar strip */
 tr.athing.comtr td.default:has(.hn-toggle) {
-  padding-left: 38px !important;
+  padding-left: 22px !important;
 }
 
 /* Spacing between comment cards */
@@ -32,20 +32,19 @@ tr.athing.comtr td.votelinks * {
   display: none !important;
 }
 
-/* Sidebar: toggle strip + vote column side by side */
+/* Sidebar: just the toggle strip */
 .hn-sidebar {
   position: absolute;
   left: 0;
   top: 0;
   bottom: 0;
-  display: flex;
-  gap: 2px;
 }
 
 /* --- Expand/collapse toggle strip --- */
 
 .hn-toggle {
   width: 12px;
+  height: 100%;
   cursor: pointer;
   background-color: rgba(128, 128, 128, 0.25);
   border-radius: 2px;
@@ -83,64 +82,52 @@ tr.athing.comtr td.votelinks * {
   background-color: #cc5200;
 }
 
-/* --- Vote column: up stacked on top of down --- */
+/* --- Inline vote button group in comhead --- */
 
-.hn-vote-col {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
+.hn-vote-group {
+  display: inline-flex;
+  margin-left: 6px;
+  border: 1px solid rgba(128, 128, 128, 0.3);
+  border-radius: 4px;
+  overflow: hidden;
+  vertical-align: middle;
 }
 
-.hn-vote-strip {
-  flex: 1;
-  width: 12px;
+.hn-vote-btn {
   cursor: pointer;
-  border-radius: 2px;
-  background-color: rgba(128, 128, 128, 0.2);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: background-color 0.15s ease;
+  font-size: 8px;
+  padding: 1px 5px;
+  color: rgba(128, 128, 128, 0.5);
+  user-select: none;
+  transition:
+    color 0.15s ease,
+    background-color 0.15s ease;
 }
 
-.hn-vote-strip::after {
-  font-size: 7px;
-  color: rgba(128, 128, 128, 0.6);
-  transition: color 0.15s ease;
+.hn-vote-btn + .hn-vote-btn {
+  border-left: 1px solid rgba(128, 128, 128, 0.3);
 }
 
-.hn-upvote::after {
-  content: "\25B2";
+.hn-downvote {
+  position: relative;
+  top: 2px;
 }
 
-.hn-downvote::after {
-  content: "\25BC";
+.hn-vote-btn:hover {
+  color: #fff;
 }
 
-/* Hover states */
 .hn-upvote:hover {
   background-color: rgba(92, 184, 92, 0.85);
-}
-
-.hn-upvote:hover::after {
-  color: #fff;
 }
 
 .hn-downvote:hover {
   background-color: rgba(217, 83, 79, 0.85);
 }
 
-.hn-downvote:hover::after {
-  color: #fff;
-}
-
-/* Voted (active) states */
 .hn-upvote.hn-voted {
-  background-color: rgba(92, 184, 92, 0.85);
-}
-
-.hn-upvote.hn-voted::after {
   color: #fff;
+  background-color: rgba(92, 184, 92, 0.85);
 }
 
 .hn-upvote.hn-voted:hover {
@@ -148,11 +135,8 @@ tr.athing.comtr td.votelinks * {
 }
 
 .hn-downvote.hn-voted {
-  background-color: rgba(217, 83, 79, 0.85);
-}
-
-.hn-downvote.hn-voted::after {
   color: #fff;
+  background-color: rgba(217, 83, 79, 0.85);
 }
 
 .hn-downvote.hn-voted:hover {
