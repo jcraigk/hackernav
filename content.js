@@ -295,8 +295,13 @@
 
   var rowToNode = new WeakMap();
   var selectedRow = null;
+  var listingMode = false;
+  var storyData = new WeakMap();
 
   function getVisibleRows() {
+    if (listingMode) {
+      return Array.from(document.querySelectorAll("tr.hn-story"));
+    }
     return Array.from(document.querySelectorAll(ROW_SELECTOR + ":not(.hn-hidden)"));
   }
 
@@ -385,6 +390,22 @@
     walkUpAndCollapse(node);
   }
 
+  function openStoryLink() {
+    if (!selectedRow) return;
+    var data = storyData.get(selectedRow);
+    if (data && data.storyUrl) {
+      window.open(data.storyUrl, "_blank");
+    }
+  }
+
+  function openCommentsLink() {
+    if (!selectedRow) return;
+    var data = storyData.get(selectedRow);
+    if (data && data.commentsUrl) {
+      window.location.href = data.commentsUrl;
+    }
+  }
+
   function handleKeydown(e) {
     var tag = document.activeElement && document.activeElement.tagName;
     if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -395,13 +416,194 @@
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
       navigate(-1);
-    } else if (e.key === "ArrowRight" || e.key === "ArrowLeft") {
-      e.preventDefault();
-      toggleSelected();
-    } else if (e.key === " ") {
-      e.preventDefault();
-      spaceNavigate();
+    } else if (listingMode) {
+      if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        openStoryLink();
+      } else if (e.key === "ArrowRight") {
+        e.preventDefault();
+        openCommentsLink();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        navigate(1);
+      }
+    } else {
+      if (e.key === "ArrowRight") {
+        e.preventDefault();
+        toggleSelected();
+      } else if (e.key === "ArrowLeft") {
+        e.preventDefault();
+        window.history.back();
+      } else if (e.key === " ") {
+        e.preventDefault();
+        spaceNavigate();
+      }
     }
+  }
+
+  // --- Listing page ---
+
+  function removeLinkWithSep(link) {
+    var target = link;
+    var parent = link.parentElement;
+    if (parent && parent.id && /^unv_/.test(parent.id)) {
+      target = parent;
+    }
+
+    var node = target.previousSibling;
+    while (node && node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "|") {
+      var prev = node.previousSibling;
+      node.remove();
+      node = prev;
+    }
+    target.remove();
+  }
+
+  function initListing() {
+    var storyRows = document.querySelectorAll("tr.athing");
+    if (storyRows.length === 0) return;
+
+    storyRows.forEach(function (row) {
+      var subtextRow = row.nextElementSibling;
+      if (!subtextRow) return;
+      var subtextTd = subtextRow.querySelector("td.subtext");
+      if (!subtextTd) return;
+
+      var titleline = row.querySelector("span.titleline");
+      if (!titleline) return;
+      var titleCell = titleline.closest("td");
+
+      // Move rank inside titleline
+      var rankSpan = row.querySelector(".rank");
+      if (rankSpan) {
+        var rankTd = rankSpan.closest("td");
+        titleline.insertBefore(rankSpan, titleline.firstChild);
+        rankTd.style.display = "none";
+      }
+
+      // Remove domain text
+      var sitebit = row.querySelector(".sitebit");
+      if (sitebit) sitebit.remove();
+
+      // Move subtext content into title cell
+      var metaDiv = document.createElement("div");
+      metaDiv.className = "hn-story-meta";
+      while (subtextTd.firstChild) {
+        metaDiv.appendChild(subtextTd.firstChild);
+      }
+      titleCell.appendChild(metaDiv);
+
+      // Remove "points" from score
+      var score = metaDiv.querySelector(".score");
+      if (score) {
+        score.textContent = score.textContent.replace(/\s*points?/, "");
+      }
+
+      // Collect special links, remove hide/unvote
+      var flagLink = null;
+      var commentsLink = null;
+      var commentsCount = "";
+
+      metaDiv.querySelectorAll("a").forEach(function (link) {
+        var text = link.textContent.replace(/\u00a0/g, " ").trim();
+        if (text === "hide" || text === "unvote") {
+          removeLinkWithSep(link);
+        } else if (text === "flag" || text === "unflag") {
+          flagLink = link;
+        } else {
+          var commentMatch = text.match(/^(\d+)\s+comments?$/);
+          if (commentMatch) {
+            commentsCount = commentMatch[1];
+            commentsLink = link;
+          } else if (text === "discuss") {
+            commentsCount = "";
+            commentsLink = link;
+          }
+        }
+      });
+
+      // Detach flag and comments (preserving references for reuse)
+      if (flagLink) removeLinkWithSep(flagLink);
+      if (commentsLink) removeLinkWithSep(commentsLink);
+
+      // Build action pill group: [⚑ | ▲ | 💬 N]
+      var actionGroup = document.createElement("span");
+      actionGroup.className = "hn-vote-group";
+
+      if (flagLink) {
+        var isFlagUndo = flagLink.textContent.trim() === "unflag";
+        flagLink.textContent = "\u2691";
+        flagLink.title = isFlagUndo ? "unflag" : "flag";
+        flagLink.className = "hn-vote-btn hn-flag-btn";
+        if (!isFlagUndo) {
+          flagLink.addEventListener("click", function (e) {
+            if (!confirm("Flag this story?")) {
+              e.preventDefault();
+            }
+          });
+        }
+        actionGroup.appendChild(flagLink);
+      }
+
+      var votelinks = row.querySelector("td.votelinks");
+      if (votelinks) {
+        var upLink = votelinks.querySelector("a[id^='up_']");
+        if (upLink) {
+          var upBtn = document.createElement("span");
+          upBtn.className = "hn-vote-btn hn-upvote";
+          upBtn.textContent = "\u25B2";
+          upBtn.title = "upvote";
+          upBtn.addEventListener("click", function (e) {
+            e.stopPropagation();
+            var url = upLink.href;
+            if (!url) return;
+            fetch(url, { credentials: "include" })
+              .then(function (res) {
+                return res.text();
+              })
+              .then(function (html) {
+                var doc = new DOMParser().parseFromString(html, "text/html");
+                var updated = doc.getElementById(upLink.id);
+                if (updated) upLink.href = updated.href;
+              })
+              .catch(function () {});
+            upBtn.classList.toggle("hn-voted");
+          });
+          if (isVoted(upLink)) {
+            upBtn.classList.add("hn-voted");
+          }
+          actionGroup.appendChild(upBtn);
+        }
+      }
+
+      if (commentsLink) {
+        commentsLink.textContent = commentsCount
+          ? commentsCount
+          : "0";
+        commentsLink.title = commentsCount ? commentsCount + " comments" : "discuss";
+        commentsLink.className = "hn-vote-btn hn-comments-btn";
+        actionGroup.appendChild(commentsLink);
+      }
+
+      var subline = metaDiv.querySelector(".subline");
+      if (subline && actionGroup.childElementCount > 0) {
+        subline.appendChild(actionGroup);
+      }
+
+      // Store story URLs for keyboard navigation
+      var storyLink = titleline.querySelector("a");
+      storyData.set(row, {
+        storyUrl: storyLink ? storyLink.href : null,
+        commentsUrl: commentsLink ? commentsLink.href : null,
+      });
+
+      row.classList.add("hn-story");
+      titleCell.classList.add("hn-story-card");
+      subtextRow.style.display = "none";
+    });
+
+    listingMode = true;
+    document.addEventListener("keydown", handleKeydown);
   }
 
   // --- Initialization ---
@@ -440,15 +642,17 @@
 
   function init() {
     const rows = getCommentRows();
-    if (rows.length === 0) return;
-
-    if (isNewcomments) {
-      initFlat(rows);
-    } else {
-      initTree(rows);
+    if (rows.length > 0) {
+      if (isNewcomments) {
+        initFlat(rows);
+      } else {
+        initTree(rows);
+      }
+      document.addEventListener("keydown", handleKeydown);
+      return;
     }
 
-    document.addEventListener("keydown", handleKeydown);
+    initListing();
   }
 
   if (document.readyState === "loading") {

@@ -6,11 +6,7 @@
   "permissions": ["activeTab"],
   "content_scripts": [
     {
-      "matches": [
-        "*://news.ycombinator.com/item*",
-        "*://news.ycombinator.com/threads*",
-        "*://news.ycombinator.com/newcomments*"
-      ],
+      "matches": ["*://news.ycombinator.com/*"],
       "js": ["content.js"],
       "css": ["styles.css"],
       "run_at": "document_idle"

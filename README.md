@@ -14,7 +14,8 @@ HackerNav replaces HN's default comment UI with a cleaner, tree-based interface:
 - **Inline voting** — Upvote/downvote buttons are moved into the comment header, replacing HN's native vote column.
 - **Quote styling** — Lines starting with `>` get a left-border blockquote treatment.
 - **Keyboard navigation** — Arrow keys move between visible comments, left/right toggle expand/collapse, and space walks the tree depth-first.
-- **Multi-page support** — Works on item (thread), threads (user comments), and newcomments pages.
+- **Listing page cleanup** — Story listings (front page, newest, ask, show, jobs, etc.) get card layout, inline voting, dimmed ranks, and domain text removed.
+- **Multi-page support** — Active on all Hacker News pages.
 
 ## Install
 

@@ -215,3 +215,70 @@ tr.athing[id].hn-selected td.default {
 tr.athing.comtr.hn-hidden {
   display: none !important;
 }
+
+/* Keyboard-selected story highlight */
+tr.hn-story.hn-selected td.hn-story-card {
+  border-color: rgba(255, 102, 0, 0.5);
+  box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.25);
+}
+
+/* --- Listing page --- */
+
+/* Story card */
+td.hn-story-card {
+  padding: 8px 12px !important;
+  border: 1px solid rgba(128, 128, 128, 0.25);
+  border-radius: 6px;
+  background-color: rgba(128, 128, 128, 0.06);
+  width: 100%;
+}
+
+/* Rank number inside titleline */
+tr.hn-story .titleline .rank {
+  opacity: 0.4;
+  margin-right: 4px;
+}
+
+/* Hide rank and vote columns on listing pages */
+tr.hn-story td.votelinks {
+  display: none !important;
+}
+
+/* Story metadata line (moved from subtext row) */
+.hn-story-meta {
+  margin-top: 4px;
+}
+
+.hn-story-meta .age a {
+  opacity: 0.5;
+}
+
+/* Hide HN's native unvote link (vote toggling handled by pill button) */
+.hn-story-meta span[id^="unv_"] {
+  display: none !important;
+}
+
+/* Action pill buttons (flag, comments) styled as vote-btn */
+a.hn-vote-btn {
+  text-decoration: none !important;
+  color: rgba(128, 128, 128, 0.5);
+}
+
+a.hn-vote-btn:visited {
+  color: rgba(128, 128, 128, 0.5);
+}
+
+.hn-flag-btn:hover {
+  color: #fff;
+  background-color: rgba(217, 83, 79, 0.85);
+}
+
+.hn-comments-btn {
+  position: relative;
+  top: 1px;
+}
+
+.hn-comments-btn:hover {
+  color: #fff;
+  background-color: rgba(255, 102, 0, 0.85);
+}
