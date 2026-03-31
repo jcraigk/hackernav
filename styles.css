@@ -1,7 +1,8 @@
 /* HackerNav styles */
 
 /* Card container for each comment */
-tr.athing.comtr td.default {
+tr.athing.comtr td.default,
+tr.athing[id] td.default {
   position: relative;
   padding: 8px 10px !important;
   border: 1px solid rgba(128, 128, 128, 0.25);
@@ -11,24 +12,33 @@ tr.athing.comtr td.default {
 }
 
 /* Comments with a toggle need left padding for the sidebar strip */
-tr.athing.comtr td.default:has(.hn-toggle) {
+tr.athing.comtr td.default:has(.hn-toggle),
+tr.athing[id] td.default:has(.hn-toggle) {
   padding-left: 22px !important;
 }
 
 /* Spacing between comment cards */
-tr.athing.comtr > td {
+tr.athing.comtr > td,
+tr.athing[id] > td {
   padding-bottom: 4px;
 }
 
 /* Hide the original vote arrow column */
-tr.athing.comtr td.votelinks {
+tr.athing.comtr td.votelinks,
+tr.athing[id] td.votelinks {
   width: 0 !important;
   min-width: 0 !important;
   padding: 0 !important;
   overflow: hidden !important;
 }
 
-tr.athing.comtr td.votelinks * {
+tr.athing.comtr td.votelinks *,
+tr.athing[id] td.votelinks * {
+  display: none !important;
+}
+
+/* Hide the "on:" story link and navs on newcomments for cleaner cards */
+html[op="newcomments"] .navs .onstory {
   display: none !important;
 }
 
@@ -167,13 +177,21 @@ tr.athing.comtr td.votelinks * {
 }
 
 .hn-pill-direct {
-  background-color: rgba(255, 102, 0, 0.2);
-  color: #ff6600;
+  background-color: rgba(255, 102, 0, 0.12);
+  color: rgba(255, 102, 0, 0.7);
 }
 
 .hn-pill-total {
-  background-color: rgba(128, 128, 128, 0.15);
-  color: rgba(128, 128, 128, 0.7);
+  background-color: rgba(80, 140, 200, 0.12);
+  color: rgba(80, 140, 200, 0.7);
+}
+
+/* Blockquote styling for lines starting with > */
+.hn-quote {
+  border-left: 3px solid rgba(128, 128, 128, 0.35);
+  padding-left: 10px;
+  margin: 4px 0;
+  opacity: 0.75;
 }
 
 /* Hide the original HN toggle */
@@ -187,7 +205,8 @@ a.togg {
 }
 
 /* Keyboard-selected comment highlight */
-tr.athing.comtr.hn-selected td.default {
+tr.athing.comtr.hn-selected td.default,
+tr.athing[id].hn-selected td.default {
   border-color: rgba(255, 102, 0, 0.5);
   box-shadow: 0 0 0 1px rgba(255, 102, 0, 0.25);
 }

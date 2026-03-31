@@ -3,9 +3,11 @@
 
   // --- Parsing ---
 
-  // Get all comment rows from the flat table
+  var isNewcomments = /\/newcomments/.test(window.location.pathname);
+  var ROW_SELECTOR = isNewcomments ? "tr.athing[id]" : "tr.athing.comtr";
+
   function getCommentRows() {
-    return Array.from(document.querySelectorAll("tr.athing.comtr"));
+    return Array.from(document.querySelectorAll(ROW_SELECTOR));
   }
 
   // Get the indent depth of a comment row (0 = top-level)
@@ -143,6 +145,37 @@
     });
   }
 
+  function styleQuotes(row) {
+    var commtext = row.querySelector(".commtext");
+    if (!commtext) return;
+
+    var nodes = Array.from(commtext.childNodes);
+    for (var i = 0; i < nodes.length; i++) {
+      var child = nodes[i];
+
+      if (child.nodeType === Node.TEXT_NODE) {
+        if (child.textContent.trimStart().startsWith(">")) {
+          var quote = document.createElement("div");
+          quote.className = "hn-quote";
+          child.textContent = child.textContent.replace(/^\s*>\s?/, "");
+          commtext.replaceChild(quote, child);
+          quote.appendChild(child);
+        }
+      } else if (child.nodeType === Node.ELEMENT_NODE && child.tagName === "P") {
+        if (child.textContent.trimStart().startsWith(">")) {
+          child.classList.add("hn-quote");
+          var first = child.firstChild;
+          while (first && first.nodeType !== Node.TEXT_NODE) {
+            first = first.firstChild || first.nextSibling;
+          }
+          if (first && first.nodeType === Node.TEXT_NODE) {
+            first.textContent = first.textContent.replace(/^>\s?/, "");
+          }
+        }
+      }
+    }
+  }
+
   function injectControls(node) {
     const defaultTd = node.row.querySelector("td.default");
     if (!defaultTd) return;
@@ -264,7 +297,7 @@
   var selectedRow = null;
 
   function getVisibleRows() {
-    return Array.from(document.querySelectorAll("tr.athing.comtr:not(.hn-hidden)"));
+    return Array.from(document.querySelectorAll(ROW_SELECTOR + ":not(.hn-hidden)"));
   }
 
   function selectComment(row) {
@@ -373,10 +406,17 @@
 
   // --- Initialization ---
 
-  function init() {
-    const rows = getCommentRows();
-    if (rows.length === 0) return;
+  function initFlat(rows) {
+    for (var i = 0; i < rows.length; i++) {
+      var node = { row: rows[i], depth: 0, children: [], parent: null, _collapsed: true };
+      rowToNode.set(rows[i], node);
+      stripNavLinks(rows[i]);
+      styleQuotes(rows[i]);
+      injectControls(node);
+    }
+  }
 
+  function initTree(rows) {
     const topLevel = buildTree(rows);
 
     function walk(nodes, isTopLevel) {
@@ -384,6 +424,7 @@
         node._collapsed = true;
         rowToNode.set(node.row, node);
         stripNavLinks(node.row);
+        styleQuotes(node.row);
         injectControls(node);
 
         if (!isTopLevel) {
@@ -395,6 +436,18 @@
     }
 
     walk(topLevel, true);
+  }
+
+  function init() {
+    const rows = getCommentRows();
+    if (rows.length === 0) return;
+
+    if (isNewcomments) {
+      initFlat(rows);
+    } else {
+      initTree(rows);
+    }
+
     document.addEventListener("keydown", handleKeydown);
   }
 
