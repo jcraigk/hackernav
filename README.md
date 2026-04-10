@@ -1,20 +1,21 @@
 # HackerNav
 
-A Chrome extension that improves comment navigation on [Hacker News](https://news.ycombinator.com).
+A Chrome extension that improves content navigation on [Hacker News](https://news.ycombinator.com).
 
 ![HackerNav preview](hackernav-preview.png)
 
 ## What It Does
 
-HackerNav replaces HN's default comment UI with a cleaner, tree-based interface:
+HackerNav replaces HN's default UI with a cleaner, tree-based interface:
 
 - **Progressive disclosure** — On load, only top-level comments are visible. Clicking the sidebar toggle reveals direct replies (each starting collapsed). Comment text always stays visible.
 - **Reply count pills** — Each comment shows direct and total reply counts at a glance.
 - **Card layout** — Comments are rendered as bordered cards with a collapsible sidebar strip instead of HN's flat indented rows.
 - **Inline voting** — Upvote/downvote buttons are moved into the comment header, replacing HN's native vote column.
 - **Quote styling** — Lines starting with `>` get a left-border blockquote treatment.
-- **Keyboard navigation** — Arrow keys move between visible comments, left/right toggle expand/collapse, and space walks the tree depth-first.
-- **Listing page cleanup** — Story listings (front page, newest, ask, show, jobs, etc.) get card layout, inline voting, dimmed ranks, and domain text removed.
+- **Keyboard navigation** — Arrow keys move between visible comments, right/left toggle expand/collapse, and space walks the tree depth-first. On listing pages, left opens the story link, right opens comments.
+- **Listing page cleanup** — Story listings (front page, newest, ask, show, jobs, etc.) get card layout, inline voting, and rank/score/comment count pills.
+- **Pagination cards** — "More" link replaced with styled next/previous page navigation cards, navigable by click or keyboard.
 - **Multi-page support** — Active on all Hacker News pages.
 
 ## Install

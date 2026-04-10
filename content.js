@@ -393,7 +393,9 @@
   function openStoryLink() {
     if (!selectedRow) return;
     var data = storyData.get(selectedRow);
-    if (data && data.storyUrl) {
+    if (data && data.navUrl) {
+      window.location.href = data.navUrl;
+    } else if (data && data.storyUrl) {
       window.open(data.storyUrl, "_blank");
     }
   }
@@ -401,7 +403,9 @@
   function openCommentsLink() {
     if (!selectedRow) return;
     var data = storyData.get(selectedRow);
-    if (data && data.commentsUrl) {
+    if (data && data.navUrl) {
+      window.location.href = data.navUrl;
+    } else if (data && data.commentsUrl) {
       window.location.href = data.commentsUrl;
     }
   }
@@ -443,28 +447,31 @@
 
   // --- Listing page ---
 
-  function removeLinkWithSep(link) {
-    var target = link;
-    var parent = link.parentElement;
-    if (parent && parent.id && /^unv_/.test(parent.id)) {
-      target = parent;
-    }
-
-    var node = target.previousSibling;
-    while (node && node.nodeType === Node.TEXT_NODE && node.textContent.trim() === "|") {
-      var prev = node.previousSibling;
-      node.remove();
-      node = prev;
-    }
-    target.remove();
-  }
-
   function initListing() {
     var storyRows = document.querySelectorAll("tr.athing");
     if (storyRows.length === 0) return;
 
+    // Center story table with margins and add spacing between cards
+    var storyTable = storyRows[0].closest("table");
+    if (storyTable) {
+      storyTable.style.width = "60%";
+      storyTable.style.margin = "0 auto";
+      storyTable.style.borderCollapse = "separate";
+      storyTable.style.borderSpacing = "0 4px";
+    }
+
     storyRows.forEach(function (row) {
       var subtextRow = row.nextElementSibling;
+
+      // Hide subtext and spacer rows for all stories (even ones we skip)
+      if (subtextRow) {
+        subtextRow.style.display = "none";
+        var spacerAfterSubtext = subtextRow.nextElementSibling;
+        if (spacerAfterSubtext && spacerAfterSubtext.classList.contains("spacer")) {
+          spacerAfterSubtext.style.display = "none";
+        }
+      }
+
       if (!subtextRow) return;
       var subtextTd = subtextRow.querySelector("td.subtext");
       if (!subtextTd) return;
@@ -473,13 +480,15 @@
       if (!titleline) return;
       var titleCell = titleline.closest("td");
 
-      // Move rank inside titleline
+      // Extract rank text and hide all non-title columns (rank, votelinks, etc.)
       var rankSpan = row.querySelector(".rank");
+      var rankText = "";
       if (rankSpan) {
-        var rankTd = rankSpan.closest("td");
-        titleline.insertBefore(rankSpan, titleline.firstChild);
-        rankTd.style.display = "none";
+        rankText = rankSpan.textContent.replace(".", "").trim();
       }
+      Array.from(row.cells).forEach(function (td) {
+        if (td !== titleCell) td.style.display = "none";
+      });
 
       // Remove domain text
       var sitebit = row.querySelector(".sitebit");
@@ -493,40 +502,69 @@
       }
       titleCell.appendChild(metaDiv);
 
-      // Remove "points" from score
+      // Extract elements from subline before rebuilding
+      var subline = metaDiv.querySelector(".subline");
       var score = metaDiv.querySelector(".score");
+      var scoreText = "";
       if (score) {
-        score.textContent = score.textContent.replace(/\s*points?/, "");
+        scoreText = score.textContent.replace(/\s*points?/, "");
       }
 
-      // Collect special links, remove hide/unvote
+      var hnuser = subline && subline.querySelector(".hnuser");
+      var age = subline && subline.querySelector(".age");
+
+      // Collect special links before clearing
       var flagLink = null;
       var commentsLink = null;
       var commentsCount = "";
 
-      metaDiv.querySelectorAll("a").forEach(function (link) {
-        var text = link.textContent.replace(/\u00a0/g, " ").trim();
-        if (text === "hide" || text === "unvote") {
-          removeLinkWithSep(link);
-        } else if (text === "flag" || text === "unflag") {
-          flagLink = link;
-        } else {
-          var commentMatch = text.match(/^(\d+)\s+comments?$/);
-          if (commentMatch) {
-            commentsCount = commentMatch[1];
-            commentsLink = link;
-          } else if (text === "discuss") {
-            commentsCount = "";
-            commentsLink = link;
+      if (subline) {
+        subline.querySelectorAll("a").forEach(function (link) {
+          var text = link.textContent.replace(/\u00a0/g, " ").trim();
+          if (text === "flag" || text === "unflag") {
+            flagLink = link;
+          } else {
+            var commentMatch = text.match(/^(\d+)\s+comments?$/);
+            if (commentMatch) {
+              commentsCount = commentMatch[1];
+              commentsLink = link;
+            } else if (text === "discuss") {
+              commentsCount = "";
+              commentsLink = link;
+            }
           }
-        }
-      });
+        });
+      }
 
-      // Detach flag and comments (preserving references for reuse)
-      if (flagLink) removeLinkWithSep(flagLink);
-      if (commentsLink) removeLinkWithSep(commentsLink);
+      // Build pills: [#1] [123] [45]
+      var pills = document.createElement("span");
+      pills.className = "hn-story-pills";
+      if (rankText) {
+        var rankPill = document.createElement("a");
+        rankPill.className = "hn-pill hn-pill-rank";
+        rankPill.textContent = "#" + rankText;
+        rankPill.title = "rank " + rankText;
+        if (commentsLink) rankPill.href = commentsLink.href;
+        pills.appendChild(rankPill);
+      }
+      if (scoreText) {
+        var scorePill = document.createElement("a");
+        scorePill.className = "hn-pill hn-pill-direct";
+        scorePill.textContent = scoreText;
+        scorePill.title = scoreText + " points";
+        if (commentsLink) scorePill.href = commentsLink.href;
+        pills.appendChild(scorePill);
+      }
+      if (commentsLink) {
+        var commentPill = document.createElement("a");
+        commentPill.className = "hn-pill hn-pill-comments";
+        commentPill.textContent = commentsCount || "0";
+        commentPill.title = commentsCount ? commentsCount + " comments" : "discuss";
+        commentPill.href = commentsLink.href;
+        pills.appendChild(commentPill);
+      }
 
-      // Build action pill group: [⚑ | ▲ | 💬 N]
+      // Build action button group: [⚑ | ▲]
       var actionGroup = document.createElement("span");
       actionGroup.className = "hn-vote-group";
 
@@ -576,18 +614,25 @@
         }
       }
 
-      if (commentsLink) {
-        commentsLink.textContent = commentsCount
-          ? commentsCount
-          : "0";
-        commentsLink.title = commentsCount ? commentsCount + " comments" : "discuss";
-        commentsLink.className = "hn-vote-btn hn-comments-btn";
-        actionGroup.appendChild(commentsLink);
-      }
+      // Rebuild subline: username timestamp [pills] [⚑ | ▲]
+      if (subline) {
+        while (subline.firstChild) subline.removeChild(subline.firstChild);
 
-      var subline = metaDiv.querySelector(".subline");
-      if (subline && actionGroup.childElementCount > 0) {
-        subline.appendChild(actionGroup);
+        if (hnuser) {
+          subline.appendChild(hnuser);
+          subline.appendChild(document.createTextNode(" "));
+        }
+        if (age) {
+          subline.appendChild(age);
+        }
+        if (pills.childElementCount > 0) {
+          subline.appendChild(document.createTextNode(" "));
+          subline.appendChild(pills);
+        }
+        if (actionGroup.childElementCount > 0) {
+          subline.appendChild(document.createTextNode(" "));
+          subline.appendChild(actionGroup);
+        }
       }
 
       // Store story URLs for keyboard navigation
@@ -599,8 +644,66 @@
 
       row.classList.add("hn-story");
       titleCell.classList.add("hn-story-card");
-      subtextRow.style.display = "none";
+      if (storyLink) {
+        titleCell.style.cursor = "pointer";
+        titleCell.addEventListener("click", function (e) {
+          if (e.target.closest("a, .hn-vote-btn, .hn-vote-group, .hn-pill")) return;
+          window.open(storyLink.href, "_blank");
+        });
+      }
     });
+
+    // --- Pagination nav cards ---
+    var currentPage = parseInt(new URLSearchParams(window.location.search).get("p"), 10) || 1;
+    var moreLink = document.querySelector("a.morelink");
+    var itemlist = moreLink && moreLink.closest("table");
+    var tbody = itemlist && (itemlist.querySelector("tbody") || itemlist);
+
+    function createNavRow(label, url) {
+      var tr = document.createElement("tr");
+      tr.className = "hn-story";
+      var td = document.createElement("td");
+      td.className = "hn-story-card hn-nav-card";
+      td.colSpan = 3;
+      td.textContent = label;
+      td.style.cursor = "pointer";
+      td.addEventListener("click", function () {
+        window.location.href = url;
+      });
+      tr.appendChild(td);
+      storyData.set(tr, { navUrl: url });
+      return tr;
+    }
+
+    // "Next page" card — replaces the More link
+    if (moreLink) {
+      var nextUrl = moreLink.href;
+      var nextRow = createNavRow("Page " + (currentPage + 1) + " \u2192", nextUrl);
+      var moreTr = moreLink.closest("tr");
+      moreTr.parentNode.insertBefore(nextRow, moreTr);
+      moreTr.style.display = "none";
+    }
+
+    // "Previous page" card on pages > 1
+    if (currentPage > 1) {
+      var prevPage = currentPage - 1;
+      var prevParams = new URLSearchParams(window.location.search);
+      if (prevPage <= 1) {
+        prevParams.delete("p");
+      } else {
+        prevParams.set("p", prevPage);
+      }
+      var prevQuery = prevParams.toString();
+      var prevUrl = window.location.pathname + (prevQuery ? "?" + prevQuery : "");
+      var prevRow = createNavRow("\u2190 Page " + prevPage, prevUrl);
+      var firstStory = tbody && tbody.querySelector("tr.hn-story");
+      if (firstStory) {
+        var spacer = document.createElement("tr");
+        spacer.className = "hn-nav-spacer";
+        tbody.insertBefore(spacer, firstStory);
+        tbody.insertBefore(prevRow, spacer);
+      }
+    }
 
     listingMode = true;
     document.addEventListener("keydown", handleKeydown);
