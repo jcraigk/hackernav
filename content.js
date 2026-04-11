@@ -424,7 +424,7 @@
       if (e.key === "ArrowLeft") {
         e.preventDefault();
         openStoryLink();
-      } else if (e.key === "ArrowRight") {
+      } else if (e.key === "ArrowRight" || e.key === "Enter") {
         e.preventDefault();
         openCommentsLink();
       } else if (e.key === " ") {
@@ -454,7 +454,7 @@
     // Center story table with margins and add spacing between cards
     var storyTable = storyRows[0].closest("table");
     if (storyTable) {
-      storyTable.style.width = "60%";
+      storyTable.style.width = "80%";
       storyTable.style.margin = "0 auto";
       storyTable.style.borderCollapse = "separate";
       storyTable.style.borderSpacing = "0 4px";
@@ -743,9 +743,84 @@
     walk(topLevel, true);
   }
 
+  function initHeader() {
+    var headerCell = document.querySelector('#hnmain td[bgcolor="#ff6600"]');
+    if (!headerCell) return;
+
+    headerCell.removeAttribute("bgcolor");
+    headerCell.style.background = "transparent";
+    headerCell.style.paddingTop = "4px";
+
+    var headerTable = headerCell.querySelector("table");
+    if (headerTable) {
+      headerTable.style.width = "80%";
+      headerTable.style.margin = "0 auto";
+      headerTable.style.background = "#ff6600";
+      headerTable.style.borderRadius = "6px";
+    }
+
+    var pagetopSpans = headerCell.querySelectorAll("span.pagetop");
+    pagetopSpans.forEach(function (span) {
+      span.style.whiteSpace = "nowrap";
+      span.querySelectorAll("a").forEach(function (link) {
+        var text = link.textContent.trim();
+        if (text === "logout") {
+          link.textContent = "\u23FB";
+          link.title = "logout";
+          link.classList.add("hn-header-logout");
+          link.classList.add("hn-header-pill");
+          return;
+        }
+        if (link.closest(".hnname")) return;
+        if (link.id === "me") return;
+        link.classList.add("hn-header-pill");
+      });
+    });
+
+    var headerTextNodes = [];
+    var walker = document.createTreeWalker(
+      headerCell,
+      NodeFilter.SHOW_TEXT,
+      null,
+    );
+    var tn;
+    while ((tn = walker.nextNode())) headerTextNodes.push(tn);
+
+    headerTextNodes.forEach(function (n) {
+      if (!n.textContent.includes("|")) return;
+      n.textContent = n.textContent.replace(/\s*\|\s*/g, " ");
+      if (n.textContent.trim() === "") n.remove();
+    });
+
+    var karmaSpan = headerCell.querySelector("span#karma");
+    if (karmaSpan) {
+      karmaSpan.classList.add("hn-karma-pill");
+      karmaSpan.title = karmaSpan.textContent.trim() + " karma";
+      var prev = karmaSpan.previousSibling;
+      if (prev && prev.nodeType === Node.TEXT_NODE) {
+        prev.textContent = prev.textContent.replace(/\s*\(\s*$/, " ");
+      }
+      var next = karmaSpan.nextSibling;
+      if (next && next.nodeType === Node.TEXT_NODE) {
+        next.textContent = next.textContent.replace(/^\s*\)\s*/, " ");
+      }
+    }
+  }
+
   function init() {
+    initHeader();
     const rows = getCommentRows();
     if (rows.length > 0) {
+      var commentTable = rows[0].closest("table");
+      if (commentTable) {
+        commentTable.style.width = "80%";
+        commentTable.style.margin = "0 auto";
+      }
+      var fatitem = document.querySelector("table.fatitem");
+      if (fatitem) {
+        fatitem.style.width = "80%";
+        fatitem.style.margin = "0 auto";
+      }
       if (isNewcomments) {
         initFlat(rows);
       } else {

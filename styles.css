@@ -98,7 +98,7 @@ html[op="newcomments"] .navs .onstory {
   display: inline-flex;
   margin-left: 6px;
   border: 1px solid rgba(128, 128, 128, 0.3);
-  border-radius: 4px;
+  border-radius: 6px;
   overflow: hidden;
   vertical-align: middle;
 }
@@ -172,7 +172,7 @@ html[op="newcomments"] .navs .onstory {
   font-family: Verdana, Geneva, sans-serif;
   line-height: 1;
   padding: 2px 5px;
-  border-radius: 8px;
+  border-radius: 6px;
   font-weight: bold;
 }
 
@@ -251,7 +251,7 @@ a.hn-pill-rank:link,
 a.hn-pill-rank:visited {
   background-color: rgba(128, 128, 128, 0.12);
   color: rgba(128, 128, 128, 0.7);
-  border-radius: 4px;
+  border-radius: 6px;
   text-decoration: none !important;
 }
 
@@ -309,7 +309,7 @@ a.hn-pill-comments:link,
 a.hn-pill-comments:visited {
   background-color: rgba(80, 140, 200, 0.12) !important;
   color: rgba(80, 140, 200, 0.7) !important;
-  border-radius: 4px;
+  border-radius: 6px;
   text-decoration: none !important;
 }
 
@@ -329,4 +329,46 @@ a.hn-pill-comments:visited {
 /* Space after nav cards */
 tr.hn-nav-spacer {
   height: 8px;
+}
+
+/* --- Header pills --- */
+a.hn-header-pill,
+a.hn-header-pill:link,
+a.hn-header-pill:visited {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.15);
+  color: #fff !important;
+  text-decoration: none !important;
+  font-size: 9pt;
+  transition: background-color 0.15s ease;
+}
+
+a.hn-header-pill:hover {
+  background-color: rgba(255, 255, 255, 0.3);
+}
+
+a.hn-header-logout {
+  font-size: 12pt;
+  padding: 0 6px !important;
+  line-height: 1;
+}
+
+span#karma.hn-karma-pill,
+.hn-karma-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  margin: 0 2px;
+  border-radius: 6px;
+  background-color: rgba(255, 255, 255, 0.9);
+  color: #ff6600;
+  font-size: 9pt;
+  font-weight: bold;
+}
+
+/* Round the Y logo in the header */
+#hnmain img[src*="y18"] {
+  border-radius: 6px;
 }
