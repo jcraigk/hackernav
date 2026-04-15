@@ -191,6 +191,12 @@
       sidebar.appendChild(toggle);
       defaultTd.insertBefore(sidebar, defaultTd.firstChild);
 
+      defaultTd.addEventListener("click", function (e) {
+        if (e.target.closest("a, button, .hn-vote-btn, .hn-toggle")) return;
+        if (window.getSelection().toString().length > 0) return;
+        toggleNode(node);
+      });
+
       if (comhead) {
         const descCount = createDescCount(node);
         node._descCount = descCount;
@@ -514,24 +520,19 @@
       var age = subline && subline.querySelector(".age");
 
       // Collect special links before clearing
-      var flagLink = null;
       var commentsLink = null;
       var commentsCount = "";
 
       if (subline) {
         subline.querySelectorAll("a").forEach(function (link) {
           var text = link.textContent.replace(/\u00a0/g, " ").trim();
-          if (text === "flag" || text === "unflag") {
-            flagLink = link;
-          } else {
-            var commentMatch = text.match(/^(\d+)\s+comments?$/);
-            if (commentMatch) {
-              commentsCount = commentMatch[1];
-              commentsLink = link;
-            } else if (text === "discuss") {
-              commentsCount = "";
-              commentsLink = link;
-            }
+          var commentMatch = text.match(/^(\d+)\s+comments?$/);
+          if (commentMatch) {
+            commentsCount = commentMatch[1];
+            commentsLink = link;
+          } else if (text === "discuss") {
+            commentsCount = "";
+            commentsLink = link;
           }
         });
       }
@@ -564,24 +565,9 @@
         pills.appendChild(commentPill);
       }
 
-      // Build action button group: [⚑ | ▲]
+      // Build action button group: [▲]
       var actionGroup = document.createElement("span");
       actionGroup.className = "hn-vote-group";
-
-      if (flagLink) {
-        var isFlagUndo = flagLink.textContent.trim() === "unflag";
-        flagLink.textContent = "\u2691";
-        flagLink.title = isFlagUndo ? "unflag" : "flag";
-        flagLink.className = "hn-vote-btn hn-flag-btn";
-        if (!isFlagUndo) {
-          flagLink.addEventListener("click", function (e) {
-            if (!confirm("Flag this story?")) {
-              e.preventDefault();
-            }
-          });
-        }
-        actionGroup.appendChild(flagLink);
-      }
 
       var votelinks = row.querySelector("td.votelinks");
       if (votelinks) {
@@ -614,10 +600,14 @@
         }
       }
 
-      // Rebuild subline: username timestamp [pills] [⚑ | ▲]
+      // Rebuild subline: [▲] username timestamp [pills]
       if (subline) {
         while (subline.firstChild) subline.removeChild(subline.firstChild);
 
+        if (actionGroup.childElementCount > 0) {
+          subline.appendChild(actionGroup);
+          subline.appendChild(document.createTextNode(" "));
+        }
         if (hnuser) {
           subline.appendChild(hnuser);
           subline.appendChild(document.createTextNode(" "));
@@ -628,10 +618,6 @@
         if (pills.childElementCount > 0) {
           subline.appendChild(document.createTextNode(" "));
           subline.appendChild(pills);
-        }
-        if (actionGroup.childElementCount > 0) {
-          subline.appendChild(document.createTextNode(" "));
-          subline.appendChild(actionGroup);
         }
       }
 
@@ -756,7 +742,7 @@
       headerTable.style.width = "80%";
       headerTable.style.margin = "0 auto";
       headerTable.style.background = "#ff6600";
-      headerTable.style.borderRadius = "6px";
+      headerTable.style.borderRadius = "4px";
     }
 
     var pagetopSpans = headerCell.querySelectorAll("span.pagetop");

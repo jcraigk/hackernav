@@ -6,9 +6,20 @@ tr.athing[id] td.default {
   position: relative;
   padding: 8px 10px !important;
   border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 6px;
+  border-radius: 4px;
   background-color: rgba(128, 128, 128, 0.06);
   overflow: hidden;
+  transition: background-color 0.15s ease;
+}
+
+tr.athing.comtr td.default:has(.hn-toggle),
+tr.athing[id] td.default:has(.hn-toggle) {
+  cursor: pointer;
+}
+
+tr.athing.comtr td.default:has(.hn-toggle):hover,
+tr.athing[id] td.default:has(.hn-toggle):hover {
+  background-color: rgba(128, 128, 128, 0.12);
 }
 
 /* Comments with a toggle need left padding for the sidebar strip */
@@ -57,7 +68,7 @@ html[op="newcomments"] .navs .onstory {
   height: 100%;
   cursor: pointer;
   background-color: rgba(128, 128, 128, 0.25);
-  border-radius: 2px;
+  border-radius: 0;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -98,9 +109,13 @@ html[op="newcomments"] .navs .onstory {
   display: inline-flex;
   margin-left: 6px;
   border: 1px solid rgba(128, 128, 128, 0.3);
-  border-radius: 6px;
+  border-radius: 4px;
   overflow: hidden;
   vertical-align: middle;
+}
+
+.hn-vote-group:first-child {
+  margin-left: 0;
 }
 
 .hn-vote-btn {
@@ -109,6 +124,10 @@ html[op="newcomments"] .navs .onstory {
   padding: 1px 5px;
   color: rgba(128, 128, 128, 0.5);
   user-select: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
   transition:
     color 0.15s ease,
     background-color 0.15s ease;
@@ -116,11 +135,6 @@ html[op="newcomments"] .navs .onstory {
 
 .hn-vote-btn + .hn-vote-btn {
   border-left: 1px solid rgba(128, 128, 128, 0.3);
-}
-
-.hn-downvote {
-  position: relative;
-  top: 2px;
 }
 
 .hn-vote-btn:hover {
@@ -172,7 +186,7 @@ html[op="newcomments"] .navs .onstory {
   font-family: Verdana, Geneva, sans-serif;
   line-height: 1;
   padding: 2px 5px;
-  border-radius: 6px;
+  border-radius: 4px;
   font-weight: bold;
 }
 
@@ -228,7 +242,7 @@ tr.hn-story.hn-selected td.hn-story-card {
 td.hn-story-card {
   padding: 8px 12px !important;
   border: 1px solid rgba(128, 128, 128, 0.25);
-  border-radius: 6px;
+  border-radius: 4px;
   background-color: rgba(128, 128, 128, 0.06);
   width: 100%;
   transition: background-color 0.15s ease;
@@ -251,7 +265,7 @@ a.hn-pill-rank:link,
 a.hn-pill-rank:visited {
   background-color: rgba(128, 128, 128, 0.12);
   color: rgba(128, 128, 128, 0.7);
-  border-radius: 6px;
+  border-radius: 4px;
   text-decoration: none !important;
 }
 
@@ -289,7 +303,7 @@ tr.hn-story td.title:not(.hn-story-card) {
   display: none !important;
 }
 
-/* Action pill buttons (flag, comments) styled as vote-btn */
+/* Action pill buttons styled as vote-btn */
 a.hn-vote-btn {
   text-decoration: none !important;
   color: rgba(128, 128, 128, 0.5);
@@ -299,17 +313,12 @@ a.hn-vote-btn:visited {
   color: rgba(128, 128, 128, 0.5);
 }
 
-.hn-flag-btn:hover {
-  color: #fff;
-  background-color: rgba(217, 83, 79, 0.85);
-}
-
 .hn-pill-comments,
 a.hn-pill-comments:link,
 a.hn-pill-comments:visited {
   background-color: rgba(80, 140, 200, 0.12) !important;
   color: rgba(80, 140, 200, 0.7) !important;
-  border-radius: 6px;
+  border-radius: 4px;
   text-decoration: none !important;
 }
 
@@ -338,7 +347,7 @@ a.hn-header-pill:visited {
   display: inline-block;
   padding: 2px 8px;
   margin: 0 2px;
-  border-radius: 6px;
+  border-radius: 4px;
   background-color: rgba(255, 255, 255, 0.15);
   color: #fff !important;
   text-decoration: none !important;
@@ -361,7 +370,7 @@ span#karma.hn-karma-pill,
   display: inline-block;
   padding: 2px 8px;
   margin: 0 2px;
-  border-radius: 6px;
+  border-radius: 4px;
   background-color: rgba(255, 255, 255, 0.9);
   color: #ff6600;
   font-size: 9pt;
@@ -370,5 +379,5 @@ span#karma.hn-karma-pill,
 
 /* Round the Y logo in the header */
 #hnmain img[src*="y18"] {
-  border-radius: 6px;
+  border-radius: 4px;
 }
