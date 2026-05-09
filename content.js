@@ -4,6 +4,7 @@
   // --- Parsing ---
 
   var isNewcomments = /\/newcomments/.test(window.location.pathname);
+  var isThreadsPage = /^\/threads/.test(window.location.pathname);
   var ROW_SELECTOR = isNewcomments ? "tr.athing[id]" : "tr.athing.comtr";
 
   function getCommentRows() {
@@ -17,6 +18,126 @@
     if (!img) return 0;
     const width = parseInt(img.getAttribute("width"), 10);
     return isNaN(width) ? 0 : width / 40;
+  }
+
+  function getLoggedInUsername() {
+    var me = document.getElementById("me");
+    return me ? me.textContent.trim() : null;
+  }
+
+  function getCommentAuthor(row) {
+    var hnuser = row.querySelector("a.hnuser");
+    return hnuser ? hnuser.textContent.trim() : null;
+  }
+
+  // On /threads, comment rows are direct siblings of #hnmain's header row,
+  // sharing its column. Wrap them in their own table so they can be sized
+  // independently — mirroring the item-page structure where comments live
+  // inside a table.comment-tree.
+  function wrapThreadsComments() {
+    var rows = getCommentRows();
+    if (rows.length === 0) return;
+
+    var firstRow = rows[0];
+    var lastRow = rows[rows.length - 1];
+    var originalParent = firstRow.parentNode;
+    if (!originalParent) return;
+
+    var wrapperTr = document.createElement("tr");
+    var wrapperTd = document.createElement("td");
+    // Match the header td's colspan so the wrapper occupies the same column
+    // block — otherwise width: 80% resolves against a different containing
+    // block for the header vs the wrapper.
+    // Match the header td's colspan via the saved ref (querying for it now
+    // would miss it — initHeader stripped the bgcolor attribute we used to
+    // identify it). Same colspan keeps the wrapper td in the same column
+    // block as the header td.
+    if (headerCellRef) {
+      wrapperTd.colSpan = headerCellRef.colSpan;
+    }
+    var wrapperTable = document.createElement("table");
+    wrapperTable.className = "hn-threads-wrapper";
+    var wrapperTbody = document.createElement("tbody");
+    wrapperTable.appendChild(wrapperTbody);
+    wrapperTd.appendChild(wrapperTable);
+    wrapperTr.appendChild(wrapperTd);
+
+    originalParent.insertBefore(wrapperTr, firstRow);
+
+    var node = firstRow;
+    while (node) {
+      var next = node.nextSibling;
+      wrapperTbody.appendChild(node);
+      if (node === lastRow) break;
+      node = next;
+    }
+
+    wrapperTableRef = wrapperTable;
+  }
+
+  // On the /threads page, promote every comment authored by the logged-in user
+  // to its own top-level entry by cloning its subtree (depths normalized) and
+  // inserting it just before the next top-level row in the same parent.
+  function duplicateOwnedSubtrees() {
+    var username = getLoggedInUsername();
+    if (!username) return;
+
+    var rows = getCommentRows();
+    if (rows.length === 0) return;
+
+    var info = rows.map(function (row) {
+      return { row: row, depth: getDepth(row), author: getCommentAuthor(row) };
+    });
+
+    var toDup = [];
+    for (var i = 0; i < info.length; i++) {
+      if (info[i].depth > 0 && info[i].author === username) {
+        toDup.push(i);
+      }
+    }
+    if (toDup.length === 0) return;
+
+    for (var k = 0; k < toDup.length; k++) {
+      var startIdx = toDup[k];
+      var startDepth = info[startIdx].depth;
+
+      // End of this owned comment's own subtree
+      var endIdx = info.length;
+      for (var a = startIdx + 1; a < info.length; a++) {
+        if (info[a].depth <= startDepth) {
+          endIdx = a;
+          break;
+        }
+      }
+
+      // Position to insert at: just before the next depth-0 row
+      var topBoundaryIdx = info.length;
+      for (var b = startIdx + 1; b < info.length; b++) {
+        if (info[b].depth === 0) {
+          topBoundaryIdx = b;
+          break;
+        }
+      }
+
+      var parent = info[startIdx].row.parentNode;
+      var anchor = topBoundaryIdx < info.length ? info[topBoundaryIdx].row : null;
+      if (anchor && anchor.parentNode !== parent) anchor = null;
+
+      for (var c = startIdx; c < endIdx; c++) {
+        var clone = info[c].row.cloneNode(true);
+        clone.removeAttribute("id");
+        var img = clone.querySelector("td.ind img");
+        if (img) {
+          var w = parseInt(img.getAttribute("width"), 10) || 0;
+          img.setAttribute("width", String(w - startDepth * 40));
+        }
+        if (anchor) {
+          parent.insertBefore(clone, anchor);
+        } else {
+          parent.appendChild(clone);
+        }
+      }
+    }
   }
 
   // Build a tree structure from the flat list of comment rows.
@@ -176,6 +297,53 @@
     }
   }
 
+  function pillifyScore(row) {
+    var score = row.querySelector(".score");
+    if (!score || score.dataset.hnPilled) return;
+    var match = score.textContent.trim().match(/^(-?\d+)\s*points?$/);
+    if (!match) return;
+    var num = match[1];
+    var numInt = parseInt(num, 10);
+
+    var pill = document.createElement("span");
+    pill.className = "hn-pill " + (numInt < 0 ? "hn-pill-negative" : "hn-pill-direct");
+    pill.textContent = num;
+    pill.title = num + " " + (Math.abs(numInt) === 1 ? "point" : "points");
+    pill.dataset.hnPilled = "1";
+
+    // Strip the leading bullet that HN puts in the comhead before the score.
+    var prev = score.previousSibling;
+    if (prev && prev.nodeType === Node.TEXT_NODE) {
+      prev.textContent = prev.textContent.replace(/\s*[·•]\s*$/, "");
+      if (!prev.textContent) prev.remove();
+    }
+
+    score.replaceWith(pill);
+
+    // Strip middle-dot/bullet characters from text nodes in td.default outside
+    // the comment body and reply link. HN sometimes places bullets in
+    // td.default *before* .comhead, so a .comhead-only walker misses them.
+    var defaultTd = row.querySelector("td.default");
+    if (defaultTd) {
+      var walker = document.createTreeWalker(defaultTd, NodeFilter.SHOW_TEXT, {
+        acceptNode: function (node) {
+          var p = node.parentElement;
+          if (p && (p.closest(".commtext") || p.closest(".reply"))) {
+            return NodeFilter.FILTER_REJECT;
+          }
+          return NodeFilter.FILTER_ACCEPT;
+        },
+      });
+      var n;
+      while ((n = walker.nextNode())) {
+        n.textContent = n.textContent.replace(
+          /[·•⋅‧・]/g,
+          "",
+        );
+      }
+    }
+  }
+
   function injectControls(node) {
     const defaultTd = node.row.querySelector("td.default");
     if (!defaultTd) return;
@@ -245,7 +413,8 @@
       voteGroup.appendChild(downBtn);
     }
 
-    comhead.appendChild(voteGroup);
+    comhead.insertBefore(voteGroup, comhead.firstChild);
+    comhead.insertBefore(document.createTextNode(" "), voteGroup.nextSibling);
 
     if (upBtn || downBtn) {
       syncVoteState(node.row, upBtn, downBtn);
@@ -303,6 +472,31 @@
   var selectedRow = null;
   var listingMode = false;
   var storyData = new WeakMap();
+  var headerTableRef = null;
+  var headerCellRef = null;
+  var wrapperTableRef = null;
+
+  function syncWrapperWidth() {
+    if (!headerTableRef || !wrapperTableRef) return;
+    var headerRect = headerTableRef.getBoundingClientRect();
+    if (headerRect.width <= 0) return;
+
+    // Pin wrapper inner table to header's exact pixel width and disable auto
+    // centering — we'll position via wrapper td padding instead.
+    wrapperTableRef.style.setProperty("width", headerRect.width + "px", "important");
+    wrapperTableRef.style.setProperty("margin", "0", "important");
+
+    // Pad the wrapper td so the wrapper's left edge sits at header's left edge.
+    var wrapperTd = wrapperTableRef.parentElement;
+    if (wrapperTd) {
+      var wrapperTdRect = wrapperTd.getBoundingClientRect();
+      var leftPad = Math.max(0, headerRect.left - wrapperTdRect.left);
+      wrapperTd.style.paddingLeft = leftPad + "px";
+      wrapperTd.style.paddingRight = "0";
+      wrapperTd.style.paddingTop = "0";
+      wrapperTd.style.paddingBottom = "0";
+    }
+  }
 
   function getVisibleRows() {
     if (listingMode) {
@@ -703,6 +897,7 @@
       rowToNode.set(rows[i], node);
       stripNavLinks(rows[i]);
       styleQuotes(rows[i]);
+      pillifyScore(rows[i]);
       injectControls(node);
     }
   }
@@ -716,6 +911,7 @@
         rowToNode.set(node.row, node);
         stripNavLinks(node.row);
         styleQuotes(node.row);
+        pillifyScore(node.row);
         injectControls(node);
 
         if (!isTopLevel) {
@@ -733,6 +929,7 @@
     var headerCell = document.querySelector('#hnmain td[bgcolor="#ff6600"]');
     if (!headerCell) return;
 
+    headerCellRef = headerCell;
     headerCell.removeAttribute("bgcolor");
     headerCell.style.background = "transparent";
     headerCell.style.paddingTop = "4px";
@@ -743,13 +940,19 @@
       headerTable.style.margin = "0 auto";
       headerTable.style.background = "#ff6600";
       headerTable.style.borderRadius = "4px";
+      headerTableRef = headerTable;
     }
 
+    var hiddenNavTexts = new Set(["comments", "ask", "show", "jobs"]);
     var pagetopSpans = headerCell.querySelectorAll("span.pagetop");
     pagetopSpans.forEach(function (span) {
       span.style.whiteSpace = "nowrap";
       span.querySelectorAll("a").forEach(function (link) {
         var text = link.textContent.trim();
+        if (hiddenNavTexts.has(text)) {
+          link.remove();
+          return;
+        }
         if (text === "logout") {
           link.textContent = "\u23FB";
           link.title = "logout";
@@ -795,24 +998,54 @@
 
   function init() {
     initHeader();
+    if (isThreadsPage) {
+      wrapThreadsComments();
+      duplicateOwnedSubtrees();
+    }
     const rows = getCommentRows();
     if (rows.length > 0) {
-      var commentTable = rows[0].closest("table");
-      if (commentTable) {
-        commentTable.style.width = "80%";
-        commentTable.style.margin = "0 auto";
+      var hnmain = document.getElementById("hnmain");
+      var seenTables = new Set();
+
+      function topAncestorTable(el) {
+        var table = el.closest && el.closest("table");
+        if (!table || table === hnmain) return null;
+        while (true) {
+          var parent = table.parentElement;
+          var parentTable = parent ? parent.closest("table") : null;
+          if (!parentTable || parentTable === hnmain) return table;
+          table = parentTable;
+        }
       }
-      var fatitem = document.querySelector("table.fatitem");
-      if (fatitem) {
-        fatitem.style.width = "80%";
-        fatitem.style.margin = "0 auto";
+
+      function constrainWidth(el) {
+        var t = topAncestorTable(el);
+        // On /threads, comtr rows are direct children of #hnmain's tbody —
+        // no wrapping table to constrain — so reach inside the row's <td>
+        // and constrain the inner layout table instead.
+        if (!t && el.tagName === "TR") {
+          var outerTd = el.firstElementChild;
+          if (outerTd && outerTd.tagName === "TD") {
+            t = outerTd.querySelector("table");
+          }
+        }
+        if (t && !seenTables.has(t)) {
+          seenTables.add(t);
+          t.style.width = "80%";
+          t.style.margin = "0 auto";
+        }
       }
+
+      rows.forEach(constrainWidth);
+      document.querySelectorAll("table.fatitem").forEach(constrainWidth);
       if (isNewcomments) {
         initFlat(rows);
       } else {
         initTree(rows);
       }
       document.addEventListener("keydown", handleKeydown);
+      syncWrapperWidth();
+      window.addEventListener("resize", syncWrapperWidth);
       return;
     }
 
