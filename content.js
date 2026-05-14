@@ -413,10 +413,10 @@
       voteGroup.appendChild(downBtn);
     }
 
-    comhead.insertBefore(voteGroup, comhead.firstChild);
-    comhead.insertBefore(document.createTextNode(" "), voteGroup.nextSibling);
-
     if (upBtn || downBtn) {
+      comhead.insertBefore(voteGroup, comhead.firstChild);
+      comhead.insertBefore(document.createTextNode(" "), voteGroup.nextSibling);
+
       syncVoteState(node.row, upBtn, downBtn);
 
       new MutationObserver(() => syncVoteState(node.row, upBtn, downBtn)).observe(votelinks, {
